@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -33,6 +34,13 @@ namespace Spotlight_Checker
                 return ImageFileType.Png;
 
             return ImageFileType.Invalid;
+        }
+
+        public static bool IsMobileSizeImage(string file)
+        {
+            Image image = new Bitmap(file);
+
+            return image.Width < image.Height;
         }
     }
 }

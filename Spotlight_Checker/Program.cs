@@ -46,6 +46,9 @@ namespace Spotlight_Checker
             if (File.Exists(newFileFullPath))
                 return;
 
+            if (ImageHelper.IsMobileSizeImage(file))
+                return;
+
             try
             {
                 if (!Directory.Exists(destFolder))

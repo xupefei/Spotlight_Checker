@@ -1,63 +1,80 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Spotlight_Checker
 {
     internal class Program
     {
-        private static string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                                                    @"AppData\Local\Packages\" +
-                                                    @"Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets");
+        private static readonly string Folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            @"AppData\Local\Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets");
 
-        private static string destFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
-                                           + "\\Spotlight Wallpapers";
+        private static readonly string DestFolderPath =
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) +
+            @"\Spotlight Wallpapers";
 
         private static void Main(string[] args)
         {
-            int thresholdKB = 200;
+            var thresholdKb = 200;
 
             if (args.Length != 0)
-                Int32.TryParse(args[0], out thresholdKB);
-
-            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
             {
-                var type = ImageHelper.ExamineImage(file);
+                int.TryParse(args[0], out thresholdKb);
+            }
 
-                if (type == ImageFileType.Invalid)
-                    continue;
+            foreach (var filePath in Directory.GetFiles(Folder, "*", SearchOption.AllDirectories))
+            {
+                var fileInfo = new FileInfo(filePath);
+                var type = fileInfo.ImageType();
 
-                if (new FileInfo(file).Length >= thresholdKB * 1024)
-                    CopyImage(file, type);
+                if (type != ImageFileType.Invalid && fileInfo.Length >= thresholdKb*1024)
+                {
+                    CopyImage(filePath, type);
+                }
             }
         }
 
-        private static void CopyImage(string file, ImageFileType type)
+        private static void CopyImage(string filePath, ImageFileType type)
         {
-            string newFileFullPath = Path.Combine(destFolder, Path.GetFileName(file));
-            if (type == ImageFileType.Jpeg)
-                newFileFullPath += ".jpg";
-            else if (type == ImageFileType.Png)
-                newFileFullPath += ".png";
+            var fileInfo = new FileInfo(filePath);
+            var directoryInfo = new DirectoryInfo(DestFolderPath);
 
-            if (File.Exists(newFileFullPath))
+            if (string.IsNullOrWhiteSpace(fileInfo.Name))
+            {
+                Console.WriteLine("Filename not found.");
                 return;
+            }
 
-            if (ImageHelper.IsMobileSizeImage(file))
+            var destFilePath = Path.Combine(directoryInfo.FullName, fileInfo.Name);
+            var destFileInfo = new FileInfo(destFilePath);
+
+            switch (type)
+            {
+                case ImageFileType.Jpeg:
+                    destFilePath += ".jpg";
+                    break;
+                case ImageFileType.Png:
+                    destFilePath += ".png";
+                    break;
+            }
+
+            if (destFileInfo.Exists || fileInfo.IsPortrait())
+            {
                 return;
+            }
 
             try
             {
-                if (!Directory.Exists(destFolder))
-                    Directory.CreateDirectory(destFolder);
+                if (!directoryInfo.Exists)
+                {
+                    directoryInfo.Create();
+                }
 
-                File.Copy(file, newFileFullPath);
+                File.Copy(fileInfo.FullName, destFilePath);
             }
-            catch (Exception)
+            catch (IOException ex)
             {
+                Console.WriteLine(ex);
             }
         }
     }
